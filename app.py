@@ -8,7 +8,7 @@ import numpy as np
 import os
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import TextSendMessage
+from linebot.models import TextSendMessage, MessageEvent  # 新增 MessageEvent
 
 app = FastAPI()
 
@@ -66,7 +66,6 @@ def get_news(preferences):
     url = f"https://newsapi.org/v2/everything?q=AI+robotics+space+-game&apiKey={NEWS_API_KEY}"
     response = requests.get(url).json()
     if response.get('status') == 'ok' and response.get('articles'):
-        # 返回前 10 篇新聞標題
         articles = response['articles'][:10]
         return [article['title'] for article in articles]
     else:
@@ -124,19 +123,26 @@ async def line_webhook(request: Request):
         raise HTTPException(status_code=400, detail="Invalid signature")
     return "OK"
 
-@handler.add(event='message')
+@handler.add(MessageEvent, message=TextSendMessage)
 def handle_message(event):
-    user_id = 1  # 假設 ID 為 1，未來可以用 Line User ID
-    conn = sqlite3.connect('digi_twin.db')
-    c = conn.cursor()
-    c.execute("SELECT * FROM users WHERE id=?", (user_id,))
-    user = c.fetchone()
-    conn.close()
-    if user:
-        city = user[2]
-        preferences = user[3]
-        weather = get_weather(city)
-        news = get_news(preferences)
-        # 將 10 篇新聞組成訊息
-        message = f"天氣: {weather}\n新聞:\n" + "\n".join([f"{i+1}. {title}" for i, title in enumerate(news)])
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=message))
+    user_input = event.message.text  # 獲取用戶輸入的文字
+    user_id = 1  # 假設 ID 為 1
+
+    if user_input == "查新聞":  # 只在輸入「查新聞」時回覆完整資料
+        conn = sqlite3.connect('digi_twin.db')
+        c = conn.cursor()
+        c.execute("SELECT * FROM users WHERE id=?", (user_id,))
+        user = c.fetchone()
+        conn.close()
+        if user:
+            city = user[2]
+            preferences = user[3]
+            weather = get_weather(city)
+            news = get_news(preferences)
+            message = f"天氣: {weather}\n新聞:\n" + "\n".join([f"{i+1}. {title}" for i, title in enumerate(news)])
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=message))
+        else:
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="找不到用戶資料"))
+    else:
+        # 其他輸入回簡單問候
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text="你好！請說『查新聞』來獲取天氣和新聞哦！"))
