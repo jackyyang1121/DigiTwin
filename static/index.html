@@ -18,7 +18,6 @@
     <div id="taskResult"></div>
 
     <script>
-        // 提交表單事件
         document.getElementById('userForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const name = document.getElementById('name').value;
@@ -33,12 +32,19 @@
             document.getElementById('result').innerText = data.message;
         });
 
-        // 獲取代理任務事件
         document.getElementById('getTask').addEventListener('click', async () => {
-            const userId = 1; // 假設用戶 ID 為 1，請根據實際情況調整
+            const userId = 1;
             const response = await fetch(`/get_task/${userId}`);
             const data = await response.json();
-            document.getElementById('taskResult').innerText = JSON.stringify(data, null, 2);
+            if (data.weather && data.news) {
+                let result = `天氣: ${data.weather}\n新聞:\n`;
+                data.news.forEach((title, index) => {
+                    result += `${index + 1}. ${title}\n`;
+                });
+                document.getElementById('taskResult').innerText = result;
+            } else {
+                document.getElementById('taskResult').innerText = data.message || "錯誤";
+            }
         });
     </script>
 </body>
