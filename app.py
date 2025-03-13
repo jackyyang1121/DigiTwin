@@ -8,7 +8,12 @@ import numpy as np
 import os
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import TextSendMessage, MessageEvent  # 新增 MessageEvent
+from linebot.models import TextSendMessage, MessageEvent, TextMessage  # 修改這裡
+import logging
+
+# 設置日誌
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
@@ -78,8 +83,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/", response_class=HTMLResponse)
 async def home():
-    with open("static/index.html") as f:
-        return f.read()
+    return HTMLResponse(content=open("static/index.html").read())
 
 @app.post("/add_user")
 async def add_user(request: Request):
@@ -117,32 +121,36 @@ async def get_task(user_id: int):
 async def line_webhook(request: Request):
     signature = request.headers.get('X-Line-Signature')
     body = await request.body()
+    logger.info(f"收到 Line Webhook: {body.decode('utf-8')}")
     try:
         handler.handle(body.decode('utf-8'), signature)
     except InvalidSignatureError:
+        logger.error("無效的簽名")
         raise HTTPException(status_code=400, detail="Invalid signature")
+    except Exception as e:
+        logger.error(f"處理 Webhook 時出錯: {str(e)}")
     return "OK"
 
-@handler.add(MessageEvent, message=TextSendMessage)
+@handler.add(MessageEvent, message=TextMessage)  # 修改這裡
 def handle_message(event):
-    user_input = event.message.text  # 獲取用戶輸入的文字
-    user_id = 1  # 假設 ID 為 1
-
-    if user_input == "查新聞":  # 只在輸入「查新聞」時回覆完整資料
-        conn = sqlite3.connect('digi_twin.db')
-        c = conn.cursor()
-        c.execute("SELECT * FROM users WHERE id=?", (user_id,))
-        user = c.fetchone()
-        conn.close()
-        if user:
-            city = user[2]
-            preferences = user[3]
-            weather = get_weather(city)
-            news = get_news(preferences)
-            message = f"天氣: {weather}\n新聞:\n" + "\n".join([f"{i+1}. {title}" for i, title in enumerate(news)])
+    logger.info(f"收到訊息: {event.message.text}")
+    user_id = 1
+    conn = sqlite3.connect('digi_twin.db')
+    c = conn.cursor()
+    c.execute("SELECT * FROM users WHERE id=?", (user_id,))
+    user = c.fetchone()
+    conn.close()
+    if user:
+        city = user[2]
+        preferences = user[3]
+        weather = get_weather(city)
+        news = get_news(preferences)
+        message = f"天氣: {weather}\n新聞:\n" + "\n".join([f"{i+1}. {title}" for i, title in enumerate(news)])
+        logger.info(f"準備回覆: {message}")
+        try:
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text=message))
-        else:
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="找不到用戶資料"))
+            logger.info("回覆成功")
+        except Exception as e:
+            logger.error(f"回覆失敗: {str(e)}")
     else:
-        # 其他輸入回簡單問候
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text="你好！請說『查新聞』來獲取天氣和新聞哦！"))
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text="找不到用戶資料"))
