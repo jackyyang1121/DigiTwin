@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>DigiTwin</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <h1>歡迎使用 DigiTwin</h1>
+    <form id="userForm">
+        <label>姓名:</label><input type="text" id="name"><br>
+        <label>城市:</label><input type="text" id="city"><br>
+        <label>偏好:</label><input type="text" id="preferences"><br>
+        <button type="submit">提交</button>
+    </form>
+    <div id="result"></div>
+    <button id="getTask">獲取代理任務</button>
+    <div id="taskResult"></div>
+
+    <script>
+        // 提交表單事件
+        document.getElementById('userForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('name').value;
+            const city = document.getElementById('city').value;
+            const preferences = document.getElementById('preferences').value;
+            const response = await fetch('/add_user', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name, city, preferences})
+            });
+            const data = await response.json();
+            document.getElementById('result').innerText = data.message;
+        });
+
+        // 獲取代理任務事件
+        document.getElementById('getTask').addEventListener('click', async () => {
+            const userId = 1; // 假設用戶 ID 為 1，請根據實際情況調整
+            const response = await fetch(`/get_task/${userId}`);
+            const data = await response.json();
+            document.getElementById('taskResult').innerText = JSON.stringify(data, null, 2);
+        });
+    </script>
+</body>
+</html>
