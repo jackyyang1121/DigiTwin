@@ -30,13 +30,11 @@ def init_db():
 
 init_db()
 
-# 訓練一個簡單的 AI 模型
 X_train = np.array([[1, 2], [2, 3], [3, 4]])
 y_train = np.array([0, 1, 1])
 model = LogisticRegression()
 model.fit(X_train, y_train)
 
-# 查天氣
 def get_weather(city):
     url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={WEATHER_API_KEY}"
     response = requests.get(url).json()
@@ -44,15 +42,25 @@ def get_weather(city):
         return response['weather'][0]['description']
     return "無法獲取天氣"
 
-# 找新聞
 def get_news(preferences):
-    url = f"https://newsapi.org/v2/top-headlines?category={preferences}&apiKey={NEWS_API_KEY}"
+    preference_map = {
+        "科技": "technology",
+        "體育": "sports",
+        "商業": "business",
+        "娛樂": "entertainment",
+        "健康": "health",
+        "科學": "science",
+        "一般": "general"
+    }
+    category = preference_map.get(preferences, preferences)
+    url = f"https://newsapi.org/v2/top-headlines?category={category}&apiKey={NEWS_API_KEY}"
     response = requests.get(url).json()
-    if response.get('articles'):
+    print("NewsAPI 回應:", response)  # 調試用
+    if response.get('status') == 'ok' and response.get('articles'):
         return response['articles'][0]['title']
-    return "無法獲取新聞"
+    else:
+        return f"無法獲取新聞: {response.get('message', '未知錯誤')}"
 
-# 預測行動
 def predict_action(features):
     return model.predict([features])[0]
 
@@ -86,7 +94,7 @@ async def get_task(user_id: int):
         preferences = user[3]
         weather = get_weather(city)
         news = get_news(preferences)
-        features = [10, 5]  # 假設的特徵值
+        features = [10, 5]
         action = predict_action(features)
         if action == 1:
             return {"weather": weather, "news": news}
