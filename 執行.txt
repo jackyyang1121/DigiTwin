@@ -1,1 +1,5 @@
-uvicorn app:app --reload --host 0.0.0.0 --port 8000
+目前已不用在終端機輸入什麼
+要啟動只需要去Heroku進到digitwin裡面
+找到Resources
+裡面有Basic dynos把她打開就可以了
+不過會收費
