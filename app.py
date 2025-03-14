@@ -154,3 +154,8 @@ def handle_message(event):
             logger.error(f"回覆失敗: {str(e)}")
     else:
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text="找不到用戶資料"))
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.getenv("PORT", 8000))  # Heroku 提供 $PORT，否則預設 8000
+    uvicorn.run(app, host="0.0.0.0", port=port)
