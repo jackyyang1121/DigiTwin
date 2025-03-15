@@ -3,3 +3,4 @@
 找到Resources
 裡面有Basic dynos把她打開就可以了
 不過會收費
+賴的Webhook URL= https://digitwin-6831e358dea3.herokuapp.com/line_webhook
